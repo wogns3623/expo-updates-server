@@ -1,0 +1,37 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "cSpell.words": [
+    "ablestor",
+    "autocommit",
+    "binfy",
+    "cpla",
+    "Customizer",
+    "DATEONLY",
+    "dtos",
+    "hexify",
+    "Includeable",
+    "Invokable",
+    "kcplaa",
+    "Keyable",
+    "lpad",
+    "metatype",
+    "middlewares",
+    "mommoss",
+    "nestjs",
+    "Nifiable",
+    "Omittable",
+    "pino",
+    "sequelize",
+    "Streamable",
+    "TINYINT",
+    "trivago",
+    "uncolorize",
+    "unhex",
+    "uuidv",
+    "zerofill"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "prettier.configPath": ".prettierrc.js"
+}
