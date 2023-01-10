@@ -16,6 +16,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import FormData from 'form-data';
 import lodash from 'lodash';
+import { Sequelize } from 'sequelize-typescript';
 import { Readable } from 'stream';
 
 import {
@@ -25,10 +26,12 @@ import {
   UploadUpdateBodyDto,
 } from './dtos';
 import { ExpoUpdateService } from './expo.update.service';
+import { FileTransactionInterceptor } from './multer';
 
 @Controller()
 export class ExpoUpdateController {
   constructor(
+    private readonly sequelize: Sequelize,
     private readonly config: ConfigService,
     private readonly expoUpdateService: ExpoUpdateService,
   ) {}
@@ -90,12 +93,14 @@ export class ExpoUpdateController {
   /**
    * @todo Support upload compressed build files, like build.tar.gz
    */
-  @UseInterceptors(FilesInterceptor('assets'))
+  @UseInterceptors(FilesInterceptor('assets'), FileTransactionInterceptor)
   @Post('upload')
   async uploadUpdateFiles(
     @UploadedFiles() assets: Express.Multer.File[],
     @Body() updateDto: UploadUpdateBodyDto,
   ) {
-    await this.expoUpdateService.createManifest({ assets, ...updateDto });
+    await this.sequelize.transaction(async () => {
+      await this.expoUpdateService.createManifest({ assets, ...updateDto });
+    });
   }
 }

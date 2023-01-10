@@ -1,4 +1,5 @@
 import { ExpoClientConfig, Platform } from '@expo/config';
+import { BadRequestException } from '@nestjs/common';
 import { createValidator, TransformJsonString } from '@util/validator';
 import { Expose, plainToInstance, Transform, Type } from 'class-transformer';
 import { IsArray, IsIn, IsNotEmpty, IsObject, IsOptional, ValidateNested } from 'class-validator';
@@ -20,7 +21,11 @@ export class ManifestRequestHeaderDto {
   @IsOptional()
   expectSignature?: string;
 
-  static validate = createValidator(ManifestRequestHeaderDto, { sync: true });
+  static validate = createValidator(ManifestRequestHeaderDto, {
+    sync: true,
+    exceptionFactory: errors =>
+      new BadRequestException({ message: 'Validation failed', detail: { errors } }),
+  });
 }
 
 export class ManifestQueryDto {
@@ -38,19 +43,33 @@ export class ManifestQueryDto {
 }
 
 export class ManifestRequestDto {
+  @Expose()
+  @IsNotEmpty()
   @IsIn(['ios', 'android'])
   platform: Platform;
 
+  @Expose()
   @IsNotEmpty()
   runtimeVersion: string;
 
+  @Expose()
   @IsOptional()
   channelName: string;
 
+  @Expose()
   @IsOptional()
   expectSignature?: string;
 
-  static validate = createValidator(ManifestRequestDto, { sync: true });
+  static validate = createValidator(ManifestRequestDto, {
+    sync: true,
+    transformToInstanceOptions: {
+      enableImplicitConversion: true,
+      excludeExtraneousValues: true,
+      exposeDefaultValues: true,
+    },
+    exceptionFactory: errors =>
+      new BadRequestException({ message: 'Validation failed', detail: { errors } }),
+  });
 }
 
 export class ExpoAssetMetadataDto {
@@ -66,6 +85,7 @@ export class ExpoPlatformAssetMetadataDto {
   bundle: string;
 
   @Type(() => ExpoAssetMetadataDto)
+  @IsNotEmpty()
   @IsArray()
   @ValidateNested({ each: true })
   assets: ExpoAssetMetadataDto[];
@@ -91,6 +111,7 @@ export class ExpoMetadataDto {
   bundler: string;
 
   @Type(() => ExpoFileMetadataDto)
+  @IsNotEmpty()
   @ValidateNested()
   fileMetadata: ExpoFileMetadataDto;
 }
@@ -103,6 +124,7 @@ export class UploadUpdateBodyDto {
   @Transform(({ value }) => {
     return plainToInstance(ExpoMetadataDto, value);
   })
+  @IsNotEmpty()
   @ValidateNested()
   metadata: ExpoMetadataDto;
 

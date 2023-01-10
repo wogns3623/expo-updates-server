@@ -2,11 +2,17 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { SequelizeModule } from '@nestjs/sequelize';
+import { createNamespace } from 'cls-hooked';
+import { Sequelize } from 'sequelize';
+
+const ns = createNamespace('sequelize-transaction');
+Sequelize.useCLS(ns);
 
 export const SequelizeDynamicModule = SequelizeModule.forRootAsync({
   inject: [ConfigService],
   useFactory: async (config: ConfigService) => {
     const isProduction = config.get('NODE_ENV') === 'production';
+
     return {
       dialect: config.get('DB_DIALECT'),
       host: config.get('DB_HOST'),

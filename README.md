@@ -53,7 +53,7 @@ $ yarn start:prod
 3. Upload new release to your server.
 
    ```bash
-   yarn upload -- -d /path/to/build -v 1.0.0 https://example.server.com
+   ./scripts/upload/sh -d /path/to/build -v 1.0.0 https://example.server.com/api/upload
    ```
 
 4. Rerun your app to get new update.

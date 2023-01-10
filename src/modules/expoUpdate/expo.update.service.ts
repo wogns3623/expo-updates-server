@@ -1,5 +1,5 @@
 import { ExpoUpdatesManifest } from '@expo/config';
-import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import fs from 'fs/promises';
 
@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { subtract } from '@util/array';
 import { createHash, signRSASHA256 } from '@util/crypto';
+import { isArray } from '@util/types';
 import { hex2UUID } from '@util/uuid';
 import mime from 'mime';
 import path from 'path';
@@ -52,35 +53,49 @@ export class ExpoUpdateService {
 
     const assetFileMap = new Map(assetFiles.map(f => [f.originalname, f]));
 
+    const errors = [];
     if (metadata.fileMetadata.android) {
-      const [androidBundle, ...androidAssets] = await this.getOrCreateAssets(
-        ExpoPlatform.Android,
-        metadata.fileMetadata.android,
-        assetFileMap,
-      );
+      try {
+        const [androidBundle, ...androidAssets] = await this.getOrCreateAssets(
+          ExpoPlatform.Android,
+          metadata.fileMetadata.android,
+          assetFileMap,
+        );
 
-      manifestDtoList.push({
-        ...commonManifest,
-        platform: ExpoPlatform.Android,
-        ExpoManifest_Assets: androidAssets.map(asset => ({ assetId: asset.id })),
-        launchAssetId: androidBundle.id,
-      });
+        manifestDtoList.push({
+          ...commonManifest,
+          platform: ExpoPlatform.Android,
+          ExpoManifest_Assets: androidAssets.map(asset => ({ assetId: asset.id })),
+          launchAssetId: androidBundle.id,
+        });
+      } catch (error) {
+        if (isArray(error)) errors.push(...error);
+        else errors.push(error);
+      }
     }
 
     if (metadata.fileMetadata.ios) {
-      const [iosBundle, ...iosAssets] = await this.getOrCreateAssets(
-        ExpoPlatform.IOS,
-        metadata.fileMetadata.ios,
-        assetFileMap,
-      );
+      try {
+        const [iosBundle, ...iosAssets] = await this.getOrCreateAssets(
+          ExpoPlatform.IOS,
+          metadata.fileMetadata.ios,
+          assetFileMap,
+        );
 
-      manifestDtoList.push({
-        ...commonManifest,
-        platform: ExpoPlatform.IOS,
-        ExpoManifest_Assets: iosAssets.map(asset => ({ assetId: asset.id })),
-        launchAssetId: iosBundle.id,
-      });
+        manifestDtoList.push({
+          ...commonManifest,
+          platform: ExpoPlatform.IOS,
+          ExpoManifest_Assets: iosAssets.map(asset => ({ assetId: asset.id })),
+          launchAssetId: iosBundle.id,
+        });
+      } catch (error) {
+        if (isArray(error)) errors.push(...error);
+        else errors.push(error);
+      }
     }
+
+    if (errors.length > 0)
+      throw new BadRequestException({ message: 'Cannot Create Manifest', detail: { errors } });
 
     await this.ExpoManifest.bulkCreate(manifestDtoList, {
       include: { association: this.ExpoManifest.associations.ExpoManifest_Assets },
@@ -110,7 +125,7 @@ export class ExpoUpdateService {
         detail: { runtimeVersion },
       });
     }
-    const requestUrl = `http://${this.config.get('HOSTNAME')}/api/assets`;
+    const requestUrl = `${this.config.get('HOSTNAME')}/api/assets`;
 
     const updatesManifestAssets = manifest.assets.map(asset => asset.toMetadata(requestUrl));
     const updatesManifestLaunchAsset = manifest.launchAsset.toMetadata(requestUrl);
@@ -183,12 +198,23 @@ export class ExpoUpdateService {
     assetMetadata: ExpoPlatformAssetMetadataDto,
     fileMap: Map<string, Express.Multer.File>,
   ) {
-    const assetDtoList = [
-      this.getBundleCreateDto(platform, assetMetadata.bundle, fileMap),
-      ...assetMetadata.assets.map(asset => {
-        return this.getAssetCreateDto(platform, asset, fileMap);
-      }),
-    ];
+    const assetDtoList: CreationAttributes<ExpoModel.ExpoAsset>[] = [];
+    const errors: any[] = [];
+
+    try {
+      assetDtoList.push(this.getBundleCreateDto(platform, assetMetadata.bundle, fileMap));
+    } catch (e) {
+      errors.push(e);
+    }
+    assetMetadata.assets.forEach(asset => {
+      try {
+        assetDtoList.push(this.getAssetCreateDto(platform, asset, fileMap));
+      } catch (e) {
+        errors.push(e);
+      }
+    });
+
+    if (errors.length > 0) throw errors;
 
     const existAssets = await this.ExpoAsset.findAll({
       where: { uuid: assetDtoList.map(({ uuid }) => uuid) },
@@ -206,7 +232,7 @@ export class ExpoUpdateService {
     return assetDtoList.map(asset => {
       if (createdAssetMap.has(asset.uuid)) return createdAssetMap.get(asset.uuid);
       if (existAssetMap.has(asset.uuid)) return existAssetMap.get(asset.uuid);
-      throw new Error(`Asset "${asset.uuid}" not found.`);
+      throw new BadRequestException(`Asset "${asset.uuid}" not found.`);
     }) as ExpoModel.ExpoAsset[];
   }
 
@@ -221,7 +247,7 @@ export class ExpoUpdateService {
   ): CreationAttributes<ExpoModel.ExpoAsset> {
     const [, uuid] = assetPath.split('/');
     const file = fileMap.get(uuid);
-    if (!file) throw new HttpException(`Asset "${uuid}" not found.`, 404);
+    if (!file) throw new BadRequestException(`Asset "${uuid}" not found in uploaded files.`);
 
     const hash = this.getAssetHash(file);
     const contentType = mime.getType(ext) ?? file.mimetype ?? 'application/octet-stream';
@@ -236,12 +262,15 @@ export class ExpoUpdateService {
   ): CreationAttributes<ExpoModel.ExpoAsset> {
     const [, filename] = assetPath.split('/');
     const file = fileMap.get(filename);
-    if (!file) throw new HttpException(`Asset "${filename}" not found.`, 404);
+    if (!file) throw new BadRequestException(`Asset "${filename}" not found in uploaded files.`);
 
     const hash = this.getAssetHash(file);
     const contentType = 'application/javascript';
     const matchResult = filename.match(bundleNameRegex);
-    if (!matchResult) throw new HttpException(`Invalid bundle name: ${filename}`, 400);
+    if (!matchResult)
+      throw new BadRequestException(
+        `Invalid bundle name: ${filename}. Bundle name must match ${bundleNameRegex}`,
+      );
     const [, , uuid] = matchResult;
 
     return {

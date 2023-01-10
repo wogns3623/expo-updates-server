@@ -38,6 +38,6 @@ async function bootstrap() {
     throw new Error(`Directory ${assetStoragePath} not exist`);
   }
 
-  await app.listen(3000);
+  await app.listen(config.get('PORT'));
 }
 bootstrap();
