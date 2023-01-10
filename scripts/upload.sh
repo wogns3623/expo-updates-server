@@ -4,6 +4,7 @@ show_help() {
     echo "  -h, --help                      Show this help message and exit"
     echo "  -d, --directory                 Directory containing the assets and metadata.json"
     echo "  -v, --runtimeVersion            Runtime version to use"
+    echo "Example: upload.sh -d ./dist -v 1.0.0 https://example.com/api/upload"
 }
 
 # show help message when no arguments are provided or when -h or --help is provided
@@ -79,4 +80,4 @@ curl -X POST \
     -F "runtimeVersion=$runtimeVersion" \
     -F "metadata=$metadata" \
     "${files[@]}" \
-    "$host/api/upload"
+    "$host"
