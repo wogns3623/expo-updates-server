@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import {
   ClassTransformOptions,
   instanceToPlain,
@@ -32,6 +33,10 @@ export interface ValidateOptions {
   exceptionFactory?: (errors: ValidationError[]) => any;
 }
 
+const defaultExceptionFactory = (errors: ValidationError[]) => {
+  return new BadRequestException({ message: 'Validation failed', detail: { errors } });
+};
+
 export interface SyncValidator<T extends object, V extends object> {
   (val: V, options?: ValidateOptions): T;
   (val: V[], options?: ValidateOptions): T[];
@@ -59,7 +64,7 @@ export function createValidator<
     validateOptions: outerValidateOptions,
     sync,
     transform = true,
-    exceptionFactory = e => e,
+    exceptionFactory = defaultExceptionFactory,
   }: Opt = {} as Opt,
 ): Validator<T, V, Opt> {
   return ((

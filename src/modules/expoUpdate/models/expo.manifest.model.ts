@@ -38,6 +38,9 @@ export class ExpoManifest
   @Column
   runtimeVersion: string;
 
+  @Column
+  releaseName: string;
+
   @Column(DataType.ENUM(...ExpoPlatformList))
   platform: ExpoPlatform;
 
@@ -78,6 +81,7 @@ interface IExpoManifest {
 
   uuid: string;
   runtimeVersion: string;
+  releaseName: string;
   platform: ExpoPlatform;
   launchAssetId: number;
   launchAsset?: ExpoBundleAsset | null;

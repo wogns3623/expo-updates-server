@@ -4,21 +4,31 @@ Custom expo update server using [NestJS](https://github.com/nestjs/nest)
 
 ## Installation
 
-```bash
-$ yarn install
-```
+- Need Mysql or MariaDB
+
+- create new certificate (if you want to use code signing)
+
+  ```bash
+  yarn certificate:generate
+  ```
+
+- install dependencies
+
+  ```bash
+  yarn install
+  ```
 
 ## Running the app
 
 ```bash
 # development
-$ yarn start
+yarn start
 
 # watch mode
-$ yarn start:dev
+yarn start:dev
 
 # production mode
-$ yarn start:prod
+yarn start:prod
 ```
 
 ## How to use
@@ -38,7 +48,9 @@ $ yarn start:prod
 
      // Use it instead
      updates: {
-       url: `https://example.server.com/api/manifest`,
+       url: `https://example.com/api/update/expo/manifests/release/default/latest`,
+       // or use releaseName
+       // url: `https://example.com/api/update/expo/manifests/release/${releaseName}/latest`,
        enabled: true,
        fallbackToCacheTimeout: 30000,
        codeSigningCertificate: './secrets/certificate.pem',
@@ -53,7 +65,7 @@ $ yarn start:prod
 3. Upload new release to your server.
 
    ```bash
-   ./scripts/upload/sh -d /path/to/build -v 1.0.0 https://example.server.com/api/upload
+   ./scripts/upload/sh -d /path/to/build -v 1.0.0 https://example.com/api/update/expo/upload
    ```
 
 4. Rerun your app to get new update.

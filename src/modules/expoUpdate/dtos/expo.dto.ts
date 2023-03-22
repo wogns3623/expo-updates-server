@@ -1,5 +1,4 @@
 import { ExpoClientConfig, Platform } from '@expo/config';
-import { BadRequestException } from '@nestjs/common';
 import { createValidator, TransformJsonString } from '@util/validator';
 import { Expose, plainToInstance, Transform, Type } from 'class-transformer';
 import { IsArray, IsIn, IsNotEmpty, IsObject, IsOptional, ValidateNested } from 'class-validator';
@@ -21,11 +20,7 @@ export class ManifestRequestHeaderDto {
   @IsOptional()
   expectSignature?: string;
 
-  static validate = createValidator(ManifestRequestHeaderDto, {
-    sync: true,
-    exceptionFactory: errors =>
-      new BadRequestException({ message: 'Validation failed', detail: { errors } }),
-  });
+  static validate = createValidator(ManifestRequestHeaderDto, { sync: true });
 }
 
 export class ManifestQueryDto {
@@ -67,8 +62,6 @@ export class ManifestRequestDto {
       excludeExtraneousValues: true,
       exposeDefaultValues: true,
     },
-    exceptionFactory: errors =>
-      new BadRequestException({ message: 'Validation failed', detail: { errors } }),
   });
 }
 
@@ -119,6 +112,9 @@ export class ExpoMetadataDto {
 export class UploadUpdateBodyDto {
   @IsNotEmpty()
   runtimeVersion: string;
+
+  @IsNotEmpty()
+  releaseName: string;
 
   @TransformJsonString()
   @Transform(({ value }) => {

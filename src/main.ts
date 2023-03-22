@@ -35,7 +35,7 @@ async function bootstrap() {
   try {
     await fs.access(assetStoragePath, fs.constants.F_OK | fs.constants.W_OK | fs.constants.R_OK);
   } catch (e) {
-    throw new Error(`Directory ${assetStoragePath} not exist`);
+    await fs.mkdir(assetStoragePath, { recursive: true });
   }
 
   await app.listen(config.get('PORT'));

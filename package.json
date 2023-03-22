@@ -1,22 +1,25 @@
 {
   "name": "expo-updates-server",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Custom expo update server using NestJS",
+  "author": "Jaehun Kim",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start:dev": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "pm2 start ecosystem.config.js",
+    "deploy": "./scripts/deploy.sh",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "certificate:configure": "mkdir -p ./secrets && expo-updates codesigning:configure --certificate-input-directory=./secrets --key-input-directory=./secrets",
+    "certificate:generate": "mkdir -p ./secrets && expo-updates codesigning:generate --key-output-directory ./secrets --certificate-output-directory ./secrets --certificate-validity-duration-years 10 --certificate-common-name kcplaa.mommoss.com"
   },
   "dependencies": {
     "@colors/colors": "^1.5.0",

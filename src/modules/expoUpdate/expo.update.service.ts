@@ -39,6 +39,7 @@ export class ExpoUpdateService {
   async createManifest({
     assets: assetFiles,
     runtimeVersion,
+    releaseName,
     metadata,
     expoClient,
   }: UploadUpdateBodyDto & { assets: Express.Multer.File[] }) {
@@ -46,6 +47,7 @@ export class ExpoUpdateService {
     const commonManifest = {
       uuid: this.getManifestUuid(metadata),
       runtimeVersion,
+      releaseName,
       createdAt: new Date().toISOString(),
       metadata: {},
       extra: { expoClient },
@@ -56,18 +58,23 @@ export class ExpoUpdateService {
     const errors = [];
     if (metadata.fileMetadata.android) {
       try {
-        const [androidBundle, ...androidAssets] = await this.getOrCreateAssets(
-          ExpoPlatform.Android,
-          metadata.fileMetadata.android,
-          assetFileMap,
-        );
-
-        manifestDtoList.push({
-          ...commonManifest,
-          platform: ExpoPlatform.Android,
-          ExpoManifest_Assets: androidAssets.map(asset => ({ assetId: asset.id })),
-          launchAssetId: androidBundle.id,
+        const existManifest = await ExpoModel.ExpoManifest.findOne({
+          where: { uuid: commonManifest.uuid, platform: ExpoPlatform.Android },
         });
+        if (!existManifest) {
+          const [androidBundle, ...androidAssets] = await this.getOrCreateAssets(
+            ExpoPlatform.Android,
+            metadata.fileMetadata.android,
+            assetFileMap,
+          );
+
+          manifestDtoList.push({
+            ...commonManifest,
+            platform: ExpoPlatform.Android,
+            ExpoManifest_Assets: androidAssets.map(asset => ({ assetId: asset.id })),
+            launchAssetId: androidBundle.id,
+          });
+        }
       } catch (error) {
         if (isArray(error)) errors.push(...error);
         else errors.push(error);
@@ -76,18 +83,23 @@ export class ExpoUpdateService {
 
     if (metadata.fileMetadata.ios) {
       try {
-        const [iosBundle, ...iosAssets] = await this.getOrCreateAssets(
-          ExpoPlatform.IOS,
-          metadata.fileMetadata.ios,
-          assetFileMap,
-        );
-
-        manifestDtoList.push({
-          ...commonManifest,
-          platform: ExpoPlatform.IOS,
-          ExpoManifest_Assets: iosAssets.map(asset => ({ assetId: asset.id })),
-          launchAssetId: iosBundle.id,
+        const existManifest = await ExpoModel.ExpoManifest.findOne({
+          where: { uuid: commonManifest.uuid, platform: ExpoPlatform.IOS },
         });
+        if (!existManifest) {
+          const [iosBundle, ...iosAssets] = await this.getOrCreateAssets(
+            ExpoPlatform.IOS,
+            metadata.fileMetadata.ios,
+            assetFileMap,
+          );
+
+          manifestDtoList.push({
+            ...commonManifest,
+            platform: ExpoPlatform.IOS,
+            ExpoManifest_Assets: iosAssets.map(asset => ({ assetId: asset.id })),
+            launchAssetId: iosBundle.id,
+          });
+        }
       } catch (error) {
         if (isArray(error)) errors.push(...error);
         else errors.push(error);
@@ -97,22 +109,27 @@ export class ExpoUpdateService {
     if (errors.length > 0)
       throw new BadRequestException({ message: 'Cannot Create Manifest', detail: { errors } });
 
-    await this.ExpoManifest.bulkCreate(manifestDtoList, {
-      include: { association: this.ExpoManifest.associations.ExpoManifest_Assets },
-    });
+    if (manifestDtoList.length > 0)
+      await this.ExpoManifest.bulkCreate(manifestDtoList, {
+        include: { association: this.ExpoManifest.associations.ExpoManifest_Assets },
+      });
   }
 
   async getManifest({
     runtimeVersion,
     platform,
-  }: ManifestRequestDto): Promise<ExpoUpdatesManifest> {
+    releaseName,
+  }: ManifestRequestDto & { releaseName: string }): Promise<ExpoUpdatesManifest> {
     const manifest = await this.ExpoManifest.findOne({
-      where: { runtimeVersion, platform },
+      where: { runtimeVersion, releaseName, platform },
       include: [
         { association: this.ExpoManifest.associations.assets },
         { association: this.ExpoManifest.associations.launchAsset, required: true },
       ],
-      order: [['id', 'desc']],
+      order: [
+        ['createdAt', 'desc'],
+        ['id', 'desc'],
+      ],
       rejectOnEmpty: new NotFoundException({
         message: `Cannot Find Manifest of runtimeVersion ${runtimeVersion}`,
         detail: { runtimeVersion },
@@ -125,7 +142,7 @@ export class ExpoUpdateService {
         detail: { runtimeVersion },
       });
     }
-    const requestUrl = `${this.config.get('HOSTNAME')}/api/assets`;
+    const requestUrl = `${this.config.get('HOSTNAME')}/api/update/expo/assets`;
 
     const updatesManifestAssets = manifest.assets.map(asset => asset.toMetadata(requestUrl));
     const updatesManifestLaunchAsset = manifest.launchAsset.toMetadata(requestUrl);

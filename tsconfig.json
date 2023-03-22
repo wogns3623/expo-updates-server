@@ -19,6 +19,6 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "typeRoots": ["./node_modules/@types", "./src/@types"]
+    "typeRoots": ["node_modules/@types", "src/@types"]
   }
 }

@@ -28,7 +28,7 @@ import {
 import { ExpoUpdateService } from './expo.update.service';
 import { FileTransactionInterceptor } from './multer';
 
-@Controller()
+@Controller('update/expo')
 export class ExpoUpdateController {
   constructor(
     private readonly sequelize: Sequelize,
@@ -42,10 +42,11 @@ export class ExpoUpdateController {
   @Header('cache-control', 'private, max-age=0')
   @Header('expo-protocol-version', '0')
   @Header('expo-sfv-version', '0')
-  @Get('manifest')
-  async getManifest(
+  @Get('manifests/release/:releaseName/latest')
+  async getLatestManifestByReleaseName(
     @Headers() headers: ManifestRequestHeaderDto,
     @Query() query: ManifestQueryDto,
+    @Param('releaseName') releaseName: string,
     @Res() res: Response,
   ) {
     headers = ManifestRequestHeaderDto.validate(headers);
@@ -53,7 +54,7 @@ export class ExpoUpdateController {
 
     const form = new FormData();
 
-    const manifest = await this.expoUpdateService.getManifest(options);
+    const manifest = await this.expoUpdateService.getManifest({ ...options, releaseName });
 
     let signature = null;
     // TODO: Parse expectSignature & use it properly
