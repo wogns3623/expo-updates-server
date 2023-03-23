@@ -59,7 +59,7 @@ export class ExpoUpdateService {
     if (metadata.fileMetadata.android) {
       try {
         const existManifest = await ExpoModel.ExpoManifest.findOne({
-          where: { uuid: commonManifest.uuid, platform: ExpoPlatform.Android },
+          where: { uuid: commonManifest.uuid, releaseName, platform: ExpoPlatform.Android },
         });
         if (!existManifest) {
           const [androidBundle, ...androidAssets] = await this.getOrCreateAssets(
@@ -84,7 +84,7 @@ export class ExpoUpdateService {
     if (metadata.fileMetadata.ios) {
       try {
         const existManifest = await ExpoModel.ExpoManifest.findOne({
-          where: { uuid: commonManifest.uuid, platform: ExpoPlatform.IOS },
+          where: { uuid: commonManifest.uuid, releaseName, platform: ExpoPlatform.IOS },
         });
         if (!existManifest) {
           const [iosBundle, ...iosAssets] = await this.getOrCreateAssets(
