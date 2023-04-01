@@ -2,6 +2,11 @@
 
 Custom expo update server using [NestJS](https://github.com/nestjs/nest)
 
+### *Currently expo updates with custom update server has an issue*
+- 
+- There is currently an [issue](https://github.com/expo/expo/pull/21787) with expo-updates that forces it to override all asset urls with expo cdn urls, even when using a custom updates server.
+- This is fine if expo cdn server is working properly for you, but if you want to change this default behavior for any reason, there is a way to modify your project's expo-updates package directly via [patch-package](https://www.npmjs.com/package/patch-package) or something.
+
 ## Installation
 
 - Need Mysql or MariaDB
