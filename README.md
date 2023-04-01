@@ -80,3 +80,6 @@ yarn start:prod
 - [ ] Add tests
 - [ ] Add pretty frontend gui
 - [ ] Add compressed build file upload (such as `build.tar.gz`)
+- [ ] Add importable NestJS module
+- [ ] Add multiple app support
+- [ ] Provide device-specific manifests based on updater IDs
