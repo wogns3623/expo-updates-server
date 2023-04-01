@@ -20,10 +20,14 @@ export class ManifestRequestHeaderDto {
   @IsOptional()
   expectSignature?: string;
 
+  @Expose({ name: 'expo-current-update-id', toClassOnly: true })
+  @IsOptional()
+  updaterId?: string;
+
   static validate = createValidator(ManifestRequestHeaderDto, { sync: true });
 }
 
-export class ManifestQueryDto {
+export class ManifestRequestQueryDto {
   @Expose({ name: 'platform', toClassOnly: true })
   @IsOptional()
   platform?: Platform;
@@ -54,6 +58,10 @@ export class ManifestRequestDto {
   @Expose()
   @IsOptional()
   expectSignature?: string;
+
+  @Expose()
+  @IsOptional()
+  updaterId?: string;
 
   static validate = createValidator(ManifestRequestDto, {
     sync: true,

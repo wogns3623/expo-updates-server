@@ -76,9 +76,13 @@ export type RemoveNullAll<T> = { [K in keyof T]-?: NonNullable<T[K]> };
 
 export type ExcludeNullable<T> = T extends Nullable ? never : T;
 
-export function isNotNullable<T>(value: T): value is ExcludeNullable<T> {
-  return value !== null && value !== undefined;
+interface IsNotNullable {
+  (value: unknown): value is ExcludeNullable<unknown>;
+  <T>(value: T): value is ExcludeNullable<T>;
 }
+export const isNotNullable: IsNotNullable = (value: unknown): value is ExcludeNullable<unknown> => {
+  return value !== null && value !== undefined;
+};
 
 export type Concrete<T> = T extends object ? { [P in keyof T]-?: Concrete<T[P]> } : NonNullable<T>;
 
@@ -269,16 +273,35 @@ export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) ex
   ? I
   : never;
 
+declare global {
+  interface IsArray {
+    <T>(arg: T): arg is Include<T, readonly any[]>;
+    (arg: any): arg is any[];
+  }
+
+  interface ArrayConstructor {
+    isArray(arg: unknown): arg is unknown[];
+    isArray<T>(arg: T): arg is Include<T, readonly any[]>;
+    isArray(arg: any): arg is any[];
+  }
+}
+
 export type ArrayOr<T> = T | readonly T[];
 export type ArrayOrToArray<T> = T extends readonly any[] ? T : T[];
 export type ArrayValue<T> = T extends readonly (infer V)[] ? V : T;
-
-export function isArray<T>(arg: T): arg is Include<T, readonly any[]> {
-  return Array.isArray(arg);
+declare global {
+  interface ArrayConstructor {
+    isArray(arg: unknown): arg is unknown[];
+    isArray<T>(arg: T): arg is Include<T, readonly any[]>;
+    isArray(arg: any): arg is any[];
+  }
 }
 
-export function arrayOrToArray<T>(arrayOr: Nullable<ArrayOr<T>>): readonly T[] {
-  return isNotNullable(arrayOr) ? (isArray(arrayOr) ? arrayOr : [arrayOr]) : [];
+export function arrayOrToArray<T>(arrayOr: Nullable<ArrayOr<T>>): readonly T[];
+export function arrayOrToArray(arrayOr: Nullable<ArrayOr<unknown>>): readonly unknown[] {
+  if (!isNotNullable(arrayOr)) return [];
+  if (Array.isArray(arrayOr)) return arrayOr;
+  return [arrayOr];
 }
 
 export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
@@ -404,3 +427,32 @@ export type TrimStart<
 > = T extends `${S}${infer U extends string}` ? TrimStart<U, S> : T;
 
 export type ReplaceUnionValue<T, V, Replaced> = [T] extends [V] ? Replaced : T;
+
+type _Overloads<T extends (...args: any[]) => any, TProcessed = unknown> = TProcessed extends T
+  ? never
+  : T extends (...args: infer A) => infer R
+  ? _Overloads<TProcessed & T, TProcessed & ((...args: A) => R)> | ((...args: A) => R)
+  : never;
+
+// For hide TProcessed generic
+export type Overloads<T extends (...args: any[]) => any> = _Overloads<T>;
+
+type _GetMatchedSignature<
+  T extends (...args: any[]) => any,
+  Args extends any[],
+  TProcessed = unknown,
+> = TProcessed extends T
+  ? never
+  : T extends (...args: infer A) => infer R
+  ?
+      | _GetMatchedSignature<TProcessed & T, Args, TProcessed & ((...args: A) => R)>
+      | (Args extends A ? (...args: A) => R : never)
+  : never;
+
+// For hide TProcessed generic
+export type GetMatchedSignature<
+  T extends (...args: any[]) => any,
+  Args extends any[],
+> = _GetMatchedSignature<T, Args>;
+
+export type UndefinedIfEmpty<T> = keyof T extends never ? undefined : T;

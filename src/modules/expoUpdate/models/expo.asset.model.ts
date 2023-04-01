@@ -1,5 +1,3 @@
-import { BINARY_UUID } from '@util/sequelize';
-import { UUID2Hex } from '@util/uuid';
 import appRootPath from 'app-root-path';
 import { createReadStream } from 'fs';
 import path from 'path';
@@ -7,13 +5,15 @@ import { Column, DataType, Model, Table } from 'sequelize-typescript';
 
 import { ExpoUpdatesManifestAsset } from '@expo/config';
 
-import { ExpoPlatform, ExpoPlatformList } from '../expo.update.types';
+import { BINARY_UUID } from '@util/sequelize';
+import { UUID2Hex } from '@util/uuid';
 
-export enum ExpoAssetType {
-  Asset = 'asset',
-  Bundle = 'bundle',
-}
-export const ExpoAssetTypeList = Object.values(ExpoAssetType);
+import {
+  ExpoAssetType,
+  ExpoAssetTypeList,
+  ExpoPlatform,
+  ExpoPlatformList,
+} from '../expo.update.types';
 
 @Table({
   modelName: 'ExpoAsset',
@@ -55,7 +55,7 @@ export class ExpoAsset extends Model<ExpoAssetAttribute, ExpoAssetCreationAttrib
     };
   }
 
-  toStream(storagePath: string) {
+  getFileStream(storagePath: string) {
     return createReadStream(
       path.resolve(appRootPath.path, storagePath, 'assets', UUID2Hex(this.uuid)),
     );
@@ -76,7 +76,7 @@ export interface ExpoBundleAsset extends ExpoAsset {
   contentType: 'application/javascript';
 }
 
-export interface IExpoAsset {
+interface IExpoAsset {
   id: number;
   uuid: string;
   platform: ExpoPlatform;

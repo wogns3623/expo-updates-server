@@ -3,14 +3,15 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 
 import fs from 'fs/promises';
 
-import { bundleNameRegex, ExpoPlatform } from './expo.update.types';
+import { bundleNameRegex, ExpoAssetType, ExpoPlatform } from './expo.update.types';
 import { ExpoModel } from './models';
 
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { subtract } from '@util/array';
 import { createHash, signRSASHA256 } from '@util/crypto';
-import { isArray } from '@util/types';
+import { ModelResult } from '@util/sequelize/types';
+import { SetRequired } from '@util/types';
 import { hex2UUID } from '@util/uuid';
 import mime from 'mime';
 import path from 'path';
@@ -23,7 +24,6 @@ import {
   ManifestRequestDto,
   UploadUpdateBodyDto,
 } from './dtos';
-import { ExpoAssetType } from './models/expo.asset.model';
 
 @Injectable()
 export class ExpoUpdateService {
@@ -34,7 +34,16 @@ export class ExpoUpdateService {
     private readonly ExpoManifest: typeof ExpoModel.ExpoManifest,
     @InjectModel(ExpoModel.ExpoAsset)
     private readonly ExpoAsset: typeof ExpoModel.ExpoAsset,
+    @InjectModel(ExpoModel.ExpoUpdater)
+    private readonly ExpoUpdater: typeof ExpoModel.ExpoUpdater,
   ) {}
+
+  async getUpdater({ updaterId }: SetRequired<ManifestRequestDto, { updaterId: true }>) {
+    const [updater] = await this.ExpoUpdater.bulkCreate([{ uuid: updaterId }], {
+      updateOnDuplicate: ['uuid'],
+    });
+    return updater;
+  }
 
   async createManifest({
     assets: assetFiles,
@@ -76,7 +85,7 @@ export class ExpoUpdateService {
           });
         }
       } catch (error) {
-        if (isArray(error)) errors.push(...error);
+        if (Array.isArray(error)) errors.push(...error);
         else errors.push(error);
       }
     }
@@ -101,7 +110,7 @@ export class ExpoUpdateService {
           });
         }
       } catch (error) {
-        if (isArray(error)) errors.push(...error);
+        if (Array.isArray(error)) errors.push(...error);
         else errors.push(error);
       }
     }
@@ -119,8 +128,10 @@ export class ExpoUpdateService {
     runtimeVersion,
     platform,
     releaseName,
-  }: ManifestRequestDto & { releaseName: string }): Promise<ExpoUpdatesManifest> {
-    const manifest = await this.ExpoManifest.findOne({
+  }: ManifestRequestDto & { releaseName: string }): Promise<
+    ModelResult<ExpoModel.ExpoManifest, { launchAsset: true; assets: true }>
+  > {
+    const manifest = (await this.ExpoManifest.findOne({
       where: { runtimeVersion, releaseName, platform },
       include: [
         { association: this.ExpoManifest.associations.assets },
@@ -134,30 +145,9 @@ export class ExpoUpdateService {
         message: `Cannot Find Manifest of runtimeVersion ${runtimeVersion}`,
         detail: { runtimeVersion },
       }),
-    });
+    })) as ModelResult<ExpoModel.ExpoManifest, { launchAsset: true; assets: true }>;
 
-    if (!manifest.assets || !manifest.launchAsset) {
-      throw new NotFoundException({
-        message: `Cannot Find Assets of runtimeVersion ${runtimeVersion}`,
-        detail: { runtimeVersion },
-      });
-    }
-    const requestUrl = `${this.config.get('HOSTNAME')}/api/update/expo/assets`;
-
-    const updatesManifestAssets = manifest.assets.map(asset => asset.toMetadata(requestUrl));
-    const updatesManifestLaunchAsset = manifest.launchAsset.toMetadata(requestUrl);
-
-    const updatesManifest: ExpoUpdatesManifest = {
-      id: manifest.uuid,
-      createdAt: manifest.createdAt.toISOString(),
-      runtimeVersion: manifest.runtimeVersion,
-      launchAsset: updatesManifestLaunchAsset,
-      assets: updatesManifestAssets,
-      metadata: manifest.metadata,
-      extra: manifest.extra,
-    };
-
-    return updatesManifest;
+    return manifest;
   }
 
   async getAsset(assetUuid: string): Promise<ExpoModel.ExpoAsset> {

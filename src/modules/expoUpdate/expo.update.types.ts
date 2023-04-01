@@ -56,5 +56,11 @@ export type ExpoAssetHeader = {
   };
 };
 
+export enum ExpoAssetType {
+  Asset = 'asset',
+  Bundle = 'bundle',
+}
+export const ExpoAssetTypeList = Object.values(ExpoAssetType);
+
 export const hexUuidRegexRaw = '[0-9a-f]{32}';
 export const bundleNameRegex = RegExp(`^(${ExpoPlatformList.join('|')})-(${hexUuidRegexRaw}).js$`);

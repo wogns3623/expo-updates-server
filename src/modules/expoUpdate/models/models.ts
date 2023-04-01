@@ -2,3 +2,4 @@
 export * from './expo.asset.model';
 export * from './expo.asset_manifest.model';
 export * from './expo.manifest.model';
+export * from './expo.updater.model';

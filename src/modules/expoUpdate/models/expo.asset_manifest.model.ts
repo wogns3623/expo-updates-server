@@ -1,4 +1,6 @@
+import { BelongsTo as BelongsToAssociation } from 'sequelize';
 import { BelongsTo, Column, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
+
 import { ExpoAsset, ExpoCommonAsset } from './expo.asset.model';
 import { ExpoManifest } from './expo.manifest.model';
 
@@ -7,10 +9,10 @@ import { ExpoManifest } from './expo.manifest.model';
   tableName: 'ExpoManifest_Asset',
   timestamps: false,
 })
-export class ExpoManifest_Asset extends Model<
-  ExpoManifest_AssetAttributes,
-  ExpoManifest_AssetCreationAttributes
-> {
+export class ExpoManifest_Asset
+  extends Model<ExpoManifest_AssetAttributes, ExpoManifest_AssetCreationAttributes>
+  implements IExpoManifest_Asset
+{
   @PrimaryKey
   @ForeignKey(() => ExpoManifest)
   @Column
@@ -26,6 +28,11 @@ export class ExpoManifest_Asset extends Model<
 
   @BelongsTo(() => ExpoAsset, { scope: { type: 'asset' } })
   asset?: ExpoCommonAsset | null;
+
+  declare static associations: {
+    manifest: BelongsToAssociation<ExpoManifest_Asset, ExpoManifest>;
+    asset: BelongsToAssociation<ExpoManifest_Asset, ExpoAsset>;
+  };
 }
 
 interface IExpoManifest_Asset {

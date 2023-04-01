@@ -1,5 +1,4 @@
 import { ExpoUpdatesManifest } from '@expo/config';
-import { BINARY_UUID, JSON_STRING } from '@util/sequelize';
 import {
   BelongsTo as BelongsToAssociation,
   BelongsToMany as BelongsToManyAssociation,
@@ -16,9 +15,13 @@ import {
   Model,
   Table,
 } from 'sequelize-typescript';
+
+import { BINARY_UUID, JSON_STRING } from '@util/sequelize';
+
 import { ExpoPlatform, ExpoPlatformList } from '../expo.update.types';
 import { ExpoAsset, ExpoBundleAsset, ExpoCommonAsset } from './expo.asset.model';
 import { ExpoManifest_Asset } from './expo.asset_manifest.model';
+import { ExpoUpdater } from './expo.updater.model';
 
 @Table({
   modelName: 'ExpoManifest',
@@ -62,6 +65,33 @@ export class ExpoManifest
   @Column(JSON_STRING(DataType.TEXT('medium')))
   extra: ExpoUpdatesManifest['extra'];
 
+  /** updater currently using this version of manifest */
+  @HasMany(() => ExpoUpdater)
+  updaters?: ExpoUpdater[];
+
+  toUpdatesManifest(
+    this: this & {
+      launchAsset: ExpoBundleAsset;
+      assets: ExpoCommonAsset[];
+    },
+    requestUrl: string,
+  ): ExpoUpdatesManifest {
+    const updatesManifestAssets = this.assets.map(asset => asset.toMetadata(requestUrl));
+    const updatesManifestLaunchAsset = this.launchAsset.toMetadata(requestUrl);
+
+    const updatesManifest: ExpoUpdatesManifest = {
+      id: this.uuid,
+      createdAt: this.createdAt.toISOString(),
+      runtimeVersion: this.runtimeVersion,
+      launchAsset: updatesManifestLaunchAsset,
+      assets: updatesManifestAssets,
+      metadata: this.metadata,
+      extra: this.extra,
+    };
+
+    return updatesManifest;
+  }
+
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly deletedAt?: Date | null;
@@ -70,6 +100,7 @@ export class ExpoManifest
     launchAsset: BelongsToAssociation<ExpoManifest, ExpoAsset>;
     assets: BelongsToManyAssociation<ExpoManifest, ExpoAsset>;
     ExpoManifest_Assets: HasManyAssociation<ExpoManifest, ExpoManifest_Asset>;
+    updaters: BelongsToManyAssociation<ExpoManifest, ExpoUpdater>;
   };
 }
 

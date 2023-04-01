@@ -39,16 +39,13 @@ export type NonConstructorKeys<TClass> = NonMatchKeys<TClass, Constructor | Abst
 
 export type OmitConstructor<TClass> = OmitValue<TClass, Constructor | AbstractConstructor>;
 
-const doNothing = () => undefined;
+const doNothing = () => {};
 
-export type ClassStaticDecorator<T> = (target: T) => void;
-
+export type ClassStaticDecorator = <T>(target: T) => void;
 /**
  * @summary class decorator to enforce static properties
  */
-export function ClassStatic<T>() {
-  return doNothing as ClassStaticDecorator<T>;
-}
+export const ClassStatic: ClassStaticDecorator = doNothing;
 
 /**
  * @example
